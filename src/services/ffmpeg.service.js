@@ -1,17 +1,25 @@
 const ffmpeg = require('fluent-ffmpeg');
 const ffprobe = require('ffprobe-static');
+const {
+    Readable
+} = require('stream');
 
 ffmpeg.setFfprobePath(ffprobe.path);
 
 // Video Meta Data retrieve function
-const getVideoMetadata = (filePath) => {
+const getVideoMetadata = (buffer) => {
     return new Promise((resolve, reject) => {
-        ffmpeg.ffprobe(filePath, (err, metadata) => {
+
+        const readable = new Readable();
+        readable.push(buffer);
+        readable.push(null);
+
+        ffmpeg(readable).ffprobe((err, metadata) => {
             if (err) return reject(err);
 
             const videoStream = metadata.streams.find(s => s.codec_type === 'video');
             const audioStream = metadata.streams.find(s => s.codec_type === 'audio');
-            
+
             resolve({
                 duration: Math.round(metadata.format.duration || 0), // seconds
                 size: metadata.format.size,
@@ -24,9 +32,12 @@ const getVideoMetadata = (filePath) => {
     });
 };
 
-const validateVideo = (filePath) => {
+const validateVideo = (buffer) => {
     return new Promise((resolve) => {
-        ffmpeg.ffprobe(filePath, (err, metadata) => {
+        const readable = new Readable();
+        readable.push(buffer);
+        readable.push(null);
+        ffmpeg(readable).ffprobe((err, metadata) => {
             if (err) return resolve(false);
             const hasVideo = metadata.streams.some(s => s.codec_type === 'video');
             resolve(hasVideo);

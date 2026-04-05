@@ -1,5 +1,9 @@
 const Video = require('../models/Video.model');
 const {
+  uploadVideoToBlob,
+  deleteBlob
+} = require('../services/blob.service');
+const {
   validateVideo,
   getVideoMetadata
 } = require('../services/ffmpeg.service');
@@ -17,7 +21,7 @@ exports.uploadVideo = async (req, res) => {
     const file = req.file;
 
 
-    const isValid = await validateVideo(file.path);
+    const isValid = await validateVideo(file.buffer);
     if (!isValid) {
       fs.unlinkSync(file.path); // delete the fake file
       return res.status(400).json({
@@ -25,15 +29,24 @@ exports.uploadVideo = async (req, res) => {
       });
     }
 
-    const meta = await getVideoMetadata(file.path);
+    const meta = await getVideoMetadata(file.buffer);
+
+    const {
+      url: videoUrl,
+      pathname
+    } = await uploadVideoToBlob(
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
 
     const video = await Video.create({
       title: title || file.originalname,
-      filename: file.filename,
+      filename: pathname,
       originalName: file.originalname,
       mimetype: file.mimetype,
       size: file.size,
-      path: file.path,
+      path: videoUrl,
       uploadedBy: req.user._id,
       organisation: req.user.organisation,
       status: 'processing',
@@ -149,7 +162,7 @@ exports.deleteVideo = async (req, res) => {
     if (!video) return res.status(404).json({
       message: 'Not found or not authorized'
     });
-    await fs.promises.unlink(path.resolve(video.path));
+    await deleteBlob(video.path);
     res.json({
       message: 'Video deleted'
     });

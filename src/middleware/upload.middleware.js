@@ -1,15 +1,6 @@
-const crypto = require('crypto');
 const multer = require('multer');
-const path = require('path');
 
-// Declared storage with file upload destination and filename
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, `${crypto.randomUUID()}${ext}`);
-    }
-});
+const storage = multer.memoryStorage();
 
 // Filter for allowed media type
 const fileFilter = (req, file, cb) => {
