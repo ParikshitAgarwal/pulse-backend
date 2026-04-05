@@ -11,7 +11,8 @@ const {
   analyzeVideo
 } = require('../services/sensitivity.service');
 const fs = require('fs');
-const path = require('path');
+const https = require('https');
+const http = require('http');
 
 exports.uploadVideo = async (req, res) => {
   try {
@@ -115,36 +116,70 @@ exports.streamVideo = async (req, res) => {
       message: 'Video not found'
     });
 
-    const videoPath = path.resolve(video.path);
-    const fileSize = video.size;
+    const blobUrl = video.path; // Vercel Blob public URL
     const range = req.headers.range;
+    const fileSize = video.size;
+
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
       if (start >= fileSize || end >= fileSize) {
-        return res.status(416).send('Requested range not satisfiable');
+        res.status(416).set({
+          'Content-Range': `bytes */${fileSize}`
+        }).end();
+        return;
       }
       const chunkSize = end - start + 1;
-      const fileStream = fs.createReadStream(videoPath, {
-        start,
-        end
+
+      const protocol = blobUrl.startsWith('https') ? https : http;
+
+      const blobReq = protocol.get(blobUrl, {
+        headers: {
+          Range: `bytes=${start}-${end}`
+        }
+      }, (blobRes) => {
+
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': video.mimetype,
+          'Cache-Control': 'no-cache',
+        });
+
+        blobRes.pipe(res);
+
+        blobRes.on('error', (err) => {
+          console.error('[Stream] Blob response error:', err.message);
+          res.end();
+        });
       });
 
-      res.writeHead(206, {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunkSize,
-        'Content-Type': video.mimetype
+      blobReq.on('error', (err) => {
+        console.error('[Stream] Blob request error:', err.message);
+        res.status(500).json({
+          message: 'Streaming failed'
+        });
       });
-      fileStream.on('error', () => res.sendStatus(404));
-      fileStream.pipe(res);
+
+      req.on('close', () => {
+        blobReq.destroy();
+      });
     } else {
-      res.writeHead(200, {
-        'Content-Length': fileSize,
-        'Content-Type': video.mimetype
+      const protocol = url.startsWith('https') ? https : http;
+      protocol.get(url, (blobRes) => {
+        const totalSize = parseInt(blobRes.headers['content-length'], 10);
+        res.writeHead(200, {
+          'Content-Length': totalSize,
+          'Content-Type': mimetype,
+          'Accept-Ranges': 'bytes',
+        });
+        blobRes.pipe(res);
+      }).on('error', (err) => {
+        console.error('[Stream Full] Error:', err.message);
+        res.status(500).end();
       });
-      fs.createReadStream(videoPath).pipe(res);
     }
   } catch (err) {
     res.status(500).json({
