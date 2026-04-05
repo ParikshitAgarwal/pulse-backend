@@ -31,3 +31,19 @@ npm start
 ```
 
 Server starts on http://localhost:5000
+
+## MongoDB Atlas Setup
+
+1.	Go to mongodb.com/atlas and create a free M0 cluster
+2.	Create a database user with read/write permissions
+3.	Go to Network Access > Add IP Address > Allow from Anywhere (0.0.0.0/0)
+4.	Copy the connection string and set it as MONGO_URI in .env
+
+
+## Vercel Blob Storage Setup
+
+1.	Go to vercel.com and create or open your project
+2.	Navigate to Storage tab > Create > Blob Store
+3.	Name the store "your-videos-blob" and create it
+4.	Copy BLOB_READ_WRITE_TOKEN from Settings and add to .env
+
