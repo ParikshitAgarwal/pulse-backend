@@ -19,10 +19,12 @@ function randomProgressMilestones(stageCount) {
 
 // Realistic timing based on file size
 const getStageDelay = (baseSecs, fileSizeMB, durationSecs) => {
-    const sizeMultiplier = Math.min(fileSizeMB / 20, 3); // caps at 3x for 60MB+
-    const durationMultiplier = Math.min(durationSecs / 60, 2); // caps at 2x for 2min+
-    const combined = 1 + (sizeMultiplier + durationMultiplier) / 2;
-    const jitter = 0.75 + Math.random() * 0.5;
+    const sizeMultiplier = Math.min(fileSizeMB / 50, 1); // 50MB = full weight
+    const durationMultiplier = Math.min(durationSecs / 120, 1); // 2min = full weight
+
+    const combined = 0.5 + (sizeMultiplier * 0.8) + (durationMultiplier * 0.7);
+
+    const jitter = 0.8 + Math.random() * 0.4; // ±20%
     return Math.floor(baseSecs * 1000 * combined * jitter);
 };
 
@@ -42,40 +44,40 @@ const analyzeVideo = async (videoId, io) => {
         },
         {
             message: 'Extracting video frames...',
-            baseSecs: 1.5
-        },
-        {
-            message: 'Decoding audio track...',
-            baseSecs: 1
-        },
-        {
-            message: 'Running visual content classifier...',
-            baseSecs: 3
-        },
-        {
-            message: 'Analyzing speech and audio patterns...',
-            baseSecs: 2.5
-        },
-        {
-            message: 'Scanning for sensitive visual content...',
-            baseSecs: 3
-        },
-        {
-            message: 'Cross-referencing content database...',
-            baseSecs: 1.5
-        },
-        {
-            message: 'Calculating risk scores...',
-            baseSecs: 1
-        },
-        {
-            message: 'Generating sensitivity report...',
             baseSecs: 0.8
         },
         {
-            message: 'Analysis complete.',
+            message: 'Decoding audio track...',
+            baseSecs: 0.6
+        },
+        {
+            message: 'Running visual content classifier...',
+            baseSecs: 1.8
+        },
+        {
+            message: 'Analyzing speech and audio patterns...',
+            baseSecs: 1.5
+        },
+        {
+            message: 'Scanning for sensitive visual content...',
+            baseSecs: 1.8
+        },
+        {
+            message: 'Cross-referencing content database...',
+            baseSecs: 0.8
+        },
+        {
+            message: 'Calculating risk scores...',
             baseSecs: 0.5
-        }
+        },
+        {
+            message: 'Generating sensitivity report...',
+            baseSecs: 0.4
+        },
+        {
+            message: 'Analysis complete.',
+            baseSecs: 0.2
+        },
     ];
 
     const progressMilestones = randomProgressMilestones(stages.length);
@@ -100,29 +102,24 @@ const analyzeVideo = async (videoId, io) => {
     }
 
     // Realistic Score Calculation 
-    const sizeRiskBonus = Math.min(fileSizeMB / 1000, 0.15);
+    const sizeRiskBonus = Math.min(fileSizeMB / 1000, 0.05);
 
-    // Individual sub-scores (independent randoms, weighted low)
-    const violenceRaw = Math.random() * 0.6; // 0 – 0.60
-    const adultRaw = Math.random() * 0.55; // 0 – 0.55
-    const hateSpeechRaw = Math.random() * 0.4; // 0 – 0.40
-    const spamRaw = Math.random() * 0.35; // 0 – 0.35
-    const copyrightRaw = Math.random() * 0.5; // 0 – 0.50
+    const violenceRaw = Math.random() * 1;
+    const adultRaw = Math.random() * 0.9;
+    const hateSpeechRaw = Math.random() * 0.8;
+    const spamRaw = Math.random() * 0.7;
+    const copyrightRaw = Math.random() * 0.6;
 
-    // Weighted composite score
     const compositeScore =
-        violenceRaw * 0.5 +
-        adultRaw * 0.5 +
-        hateSpeechRaw * 0.3 +
-        spamRaw * 0.1 +
-        copyrightRaw * 0.4 +
+        violenceRaw * 0.30 +
+        adultRaw * 0.25 +
+        hateSpeechRaw * 0.20 +
+        spamRaw * 0.10 +
+        copyrightRaw * 0.15 +
         sizeRiskBonus;
 
     const finalScore = parseFloat(Math.min(compositeScore, 1).toFixed(2));
-
-    // Flag if composite crosses 0.55 threshold
-    const isFlagged = finalScore > 0.55;
-
+    const isFlagged = finalScore > 0.5
     // Severity label
     let severity = 'none';
     if (finalScore > 0.75) severity = 'high';
