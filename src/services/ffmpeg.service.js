@@ -1,7 +1,7 @@
 const ffmpeg = require('fluent-ffmpeg');
-const ffprobePath = require('@ffprobe-installer/ffprobe').path;
+const ffprobe = require('ffprobe-static');
 
-ffmpeg.setFfprobePath(ffprobePath);
+ffmpeg.setFfprobePath(ffprobe.path);
 
 // Video Meta Data retrieve function
 const getVideoMetadata = (filePath) => {
@@ -11,9 +11,7 @@ const getVideoMetadata = (filePath) => {
 
             const videoStream = metadata.streams.find(s => s.codec_type === 'video');
             const audioStream = metadata.streams.find(s => s.codec_type === 'audio');
-
-
-            console.log(metadata)
+            
             resolve({
                 duration: Math.round(metadata.format.duration || 0), // seconds
                 size: metadata.format.size,
